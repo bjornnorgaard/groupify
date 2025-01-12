@@ -1,22 +1,10 @@
 <script lang="ts">
-
+    import Card from "./Card.svelte";
     import { onMount } from "svelte";
-
-    let raw = $state("Tidsstempel\tDansk / English\tFulde Navn\tLejligheds-/værelsesnummer\tTelefonnummer\tVegetar?\tPrioriter de dage, hvor du ønsker at deltage. [Mandag d. 10 februar]\tPrioriter de dage, hvor du ønsker at deltage. [Tirsdag d. 11. marts]\tPrioriter de dage, hvor du ønsker at deltage. [Onsdag d. 9. april]\tPrioriter de dage, hvor du ønsker at deltage. [Torsdag d. 8. maj]\n" +
-        "\t\t\t\t\t\t\t\t\t\n" +
-        "07/01/2025 21.02.56\tDansk\tEmma\t\t\tJa\t2. Prioritet\t\t1. Prioritet\t3. Prioritet\n" +
-        "07/01/2025 21.04.07\tDansk\tAnja\t\t\tNej\t1. Prioritet\t2. Prioritet\t4. Prioritet\t4. Prioritet\n" +
-        "07/01/2025 21.10.29\tDansk\tMaria\t\t\tNej\t1. Prioritet\t3. Prioritet\t\t2. Prioritet\n" +
-        "07/01/2025 21.18.15\tDansk\tZacharias\t\t\tNej\t3. Prioritet\t1. Prioritet\t2. Prioritet\t4. Prioritet\n" +
-        "08/01/2025 08.59.27\tDansk\tMarie\t\t\tJa\t2. Prioritet\t1. Prioritet\t3. Prioritet\t4. Prioritet\n" +
-        "08/01/2025 10.01.30\tDansk\tMartin\t\t\tNej\t4. Prioritet\t1. Prioritet\t3. Prioritet\t3. Prioritet\n" +
-        "08/01/2025 17.59.49\tDansk\tMorten\t\t\tNej\t\t2. Prioritet\t1. Prioritet\t1. Prioritet\n" +
-        "09/01/2025 18.35.25\tDansk\tPeter\t\t\tJa\t\t1. Prioritet\t3. Prioritet\t2. Prioritet\n" +
-        "11/01/2025 16.18.43\tDansk\tErik\t\t\tNej\t2. Prioritet\t1. Prioritet\t4. Prioritet\t1. Prioritet");
+    import { browser } from "$app/environment";
 
     interface Settings {
         maxPerOption: number;
-        minPerOption: number;
     }
 
     interface Response {
@@ -39,21 +27,61 @@
         label: string;
     }
 
-    let settings = $state<Settings>({ maxPerOption: 8, minPerOption: 5 });
-    let responses = $state<Response[]>([]);
-    let options = $state<Option[]>([]);
+    interface Schedule {
+        optionKey: number;
+        participantNames: string[];
+    }
+
+    let settings = $state<Settings>({ maxPerOption: 5 });
+    const key = "groupify";
+
+    let raw = $state("");
+    let options = $derived(extractOptions(raw));
+    let responses = $derived(parseAllResponses(raw));
+    let schedules = $derived(scheduleParticipants(settings, options, responses));
+    let evaluationCounts = $derived(participationCounts(schedules));
+
+    $effect(() => {
+        if (!browser) {
+            return;
+        }
+
+        if (!raw?.length) {
+            return;
+        }
+
+        localStorage.setItem(key, raw);
+    });
 
     onMount(() => {
-        options = extractOptions();
-        responses = parseAllResponses(raw);
+        if (!browser) {
+            return;
+        }
+
+        const stored = localStorage.getItem(key);
+        if (!stored) {
+            return;
+        }
+
+        raw = stored;
     });
+
+    function participationCounts(schedules: Schedule[]): { [name: string]: number } {
+        const counts: { [name: string]: number } = {};
+        for (let s of schedules) {
+            for (const n of s.participantNames) {
+                counts[n] = (counts[n] || 0) + 1;
+            }
+        }
+        return counts;
+    }
 
     function parseAllResponses(raw: string): Response[] {
         return raw.split("\n").slice(1).map(parseResponse).filter(r => r.name !== "");
     }
 
-    function parseResponse(raw: string): Response {
-        let [ timestamp, language, name, apartment, phone, vegetarian, ...selections ] = raw.split("\t");
+    function parseResponse(line: string): Response {
+        let [ timestamp, language, name, apartment, phone, vegetarian, ...selections ] = line.split("\t");
         return {
             timestamp,
             language,
@@ -70,7 +98,7 @@
         return match ? parseInt(match[1]) : 0;
     }
 
-    function extractOptions(): Option[] {
+    function extractOptions(raw: string): Option[] {
         if (!raw?.length) {
             return [];
         }
@@ -99,43 +127,59 @@
         }
         return result;
     }
+
+    function scheduleParticipants(settings: Settings, options: Option[], responses: Response[]): Schedule[] {
+        let results = options.map(o => ({ optionKey: o.key, participantNames: [] }));
+        for (let i = 0; i < options.length; i++) {
+            let option = options[i];
+            let schedule = results[i];
+            let participants = responses.filter(r => r.selections.some(s => s.optionKey === option.key));
+            let sorted = participants.sort((a, b) => a.selections.find(s => s.optionKey === option.key).priority - b.selections.find(s => s.optionKey === option.key).priority);
+            for (let j = 0; j < sorted.length; j++) {
+                let participant = sorted[j];
+                if (schedule.participantNames.length < settings.maxPerOption) {
+                    schedule.participantNames.push(participant.name);
+                }
+            }
+        }
+        return results;
+    }
 </script>
 
 <div class="space-y-4">
     <label class="label">
-        <span>Raw Input</span>
+        <span>Copy/pasta alle rækker og kolonner her (kun celler med data)</span>
         <textarea bind:value={raw} class="textarea" rows="4"></textarea>
     </label>
 
-    <div class="flex justify-between gap-4">
-        <label class="w-full label">
-            <span>Lower Limit</span>
-            <input type="number" bind:value={settings.minPerOption} class="input"/>
-        </label>
+    <label class="label">
+        <span>Max antal deltagere for en given mulighed</span>
+        <input type="number" bind:value={settings.maxPerOption} class="input"/>
+    </label>
 
-        <label class="label w-full">
-            <span>Upper Limit</span>
-            <input type="number" bind:value={settings.maxPerOption} class="input"/>
-        </label>
-    </div>
-
-    <div class="flex flex-wrap gap-4">
-    <span>Detected Options</span>
-        {#each options as o}
-            <li class="chip variant-filled-primary">{o.label}</li>
+    <Card title="Resultatet">
+        {#each schedules as s}
+            {@const o = options.find(o => o.key === s.optionKey)}
+            {#if o}
+                <div class="pb-4">
+                    <h3 class="h3 text-primary-500">{o.label}</h3>
+                    <div class="flex gap-4 flex-wrap">
+                        {s.participantNames.join(", ")}.
+                    </div>
+                </div>
+            {/if}
         {/each}
-    </div>
+    </Card>
+
+    <Card title="Antal middage per person">
+        <pre class="pre">{JSON.stringify(evaluationCounts, null, 2)}</pre>
+    </Card>
 
     <div class="table-container">
         <table class="table table-hover">
             <thead>
             <tr>
-                <!--            <th>Timestamp</th>-->
-                <!--            <th>Language</th>-->
-                <th>Name</th>
-                <!--            <th>Apartment</th>-->
-                <!--            <th>Phone</th>-->
-                <!--            <th>Vegetarian</th>-->
+                <th>Navn</th>
                 {#each options as option}
                     <th>{option.label}</th>
                 {/each}
@@ -144,12 +188,7 @@
             <tbody>
             {#each responses as response}
                 <tr>
-                    <!--                <td>{response.timestamp}</td>-->
-                    <!--                <td>{response.language}</td>-->
                     <td>{response.name}</td>
-                    <!--                <td>{response.apartment}</td>-->
-                    <!--                <td>{response.phone}</td>-->
-                    <!--                <td>{response.vegetarian ? "Yes" : "No"}</td>-->
                     {#each options as option}
                         <td>
                             {#each response.selections as selection}
