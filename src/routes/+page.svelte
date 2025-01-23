@@ -134,7 +134,6 @@
         let results = options.map(o => ({ optionKey: o.key, participantNames: [] }));
         let addedNames = new Set<string>();
 
-        // First pass: Assign participants based on their highest priority
         for (let r of responses) {
             for (let p of r.selections.sort((a, b) => a.priority - b.priority)) {
                 if (!addedNames.has(r.name)) {
@@ -142,13 +141,12 @@
                     if (option && option.participantNames.length < settings.maxPerOption) {
                         option.participantNames.push(r.name);
                         addedNames.add(r.name);
-                        break; // Move to the next participant after assigning to the highest priority option
+                        break;
                     }
                 }
             }
         }
 
-        // Second pass: Ensure each option meets the minimum requirement
         for (let result of results) {
             if (result.participantNames.length < settings.minPerOption) {
                 for (let otherResult of results) {
@@ -157,7 +155,7 @@
                             let name = otherResult.participantNames.pop();
                             if (name) {
                                 result.participantNames.push(name);
-                                addedNames.delete(name); // Remove from addedNames to allow redistribution
+                                addedNames.delete(name);
                             }
                         }
                     }
