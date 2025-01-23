@@ -1,7 +1,5 @@
 <script lang="ts">
     import Card from "./Card.svelte";
-    import { onMount } from "svelte";
-    import { browser } from "$app/environment";
     import { testData } from "$lib";
 
     interface Settings {
@@ -34,49 +32,12 @@
         participantNames: string[];
     }
 
-    let settings = $state<Settings>({ maxPerOption: 8, minPerOption: 4 });
-    const key = "groupify";
-
     let raw = $state("");
     let options = $derived(extractOptions(raw));
     let responses = $derived(parseAllResponses(raw));
+    let settings = $state<Settings>({ maxPerOption: 8, minPerOption: 4 });
     let schedules = $derived(scheduleParticipants(settings, options, responses));
-    let evaluationCounts = $derived(participationCounts(schedules));
-
-    $effect(() => {
-        if (!browser) {
-            return;
-        }
-
-        if (!raw?.length) {
-            return;
-        }
-
-        localStorage.setItem(key, raw);
-    });
-
-    onMount(() => {
-        if (!browser) {
-            return;
-        }
-
-        const stored = localStorage.getItem(key);
-        if (!stored) {
-            return;
-        }
-
-        raw = stored;
-    });
-
-    function participationCounts(schedules: Schedule[]): { [name: string]: number } {
-        const counts: { [name: string]: number } = {};
-        for (let s of schedules) {
-            for (const n of s.participantNames) {
-                counts[n] = (counts[n] || 0) + 1;
-            }
-        }
-        return counts;
-    }
+    let unscheduled = $state([]);
 
     function parseAllResponses(raw: string): Response[] {
         return raw.split("\n").slice(1).map(parseResponse).filter(r => r.name !== "");
@@ -168,6 +129,7 @@
 
         return results;
     }
+
 </script>
 
 <div class="space-y-4">
@@ -199,6 +161,10 @@
             {/if}
         {/each}
     </Card>
+
+    {#if unscheduled.length !== 0}
+        <pre>{JSON.stringify({missing: unscheduled}, null, 2)}</pre>
+    {/if}
 
     <div class="table-container">
         <table class="table table-hover">
