@@ -6,6 +6,7 @@
 
     interface Settings {
         maxPerOption: number;
+        minPerOption: number;
     }
 
     interface Response {
@@ -33,7 +34,7 @@
         participantNames: string[];
     }
 
-    let settings = $state<Settings>({ maxPerOption: 5 });
+    let settings = $state<Settings>({ maxPerOption: 8, minPerOption: 4 });
     const key = "groupify";
 
     let raw = $state("");
@@ -131,21 +132,23 @@
 
     function scheduleParticipants(settings: Settings, options: Option[], responses: Response[]): Schedule[] {
         let results = options.map(o => ({ optionKey: o.key, participantNames: [] }));
-        for (let i = 0; i < options.length; i++) {
-            let option = options[i];
-            let schedule = results[i];
-            let participants = responses.filter(r => r.selections.some(s => s.optionKey === option.key));
-            let sorted = participants.sort((a, b) => a.selections.find(s => s.optionKey === option.key).priority - b.selections.find(s => s.optionKey === option.key).priority);
-            for (let j = 0; j < sorted.length; j++) {
-                let participant = sorted[j];
-                if (schedule.participantNames.length < settings.maxPerOption) {
-                    schedule.participantNames.push(participant.name);
+        let addedNames = new Set<string>();
+
+        for (let r of responses) {
+            for (let p of r.selections.sort((a, b) => a.priority - b.priority)) {
+                if (!addedNames.has(r.name)) {
+                    let option = results.find(o => o.optionKey === p.optionKey);
+                    if (option && option.participantNames.length < settings.maxPerOption) {
+                        option.participantNames.push(r.name);
+                        addedNames.add(r.name);
+                        break; // Move to the next participant after assigning to the highest priority option
+                    }
                 }
             }
         }
+
         return results;
-    }
-</script>
+    }</script>
 
 <div class="space-y-4">
     <label class="label">
@@ -156,6 +159,11 @@
     <label class="label">
         <span>Max antal deltagere for en given mulighed</span>
         <input type="number" bind:value={settings.maxPerOption} class="input"/>
+    </label>
+
+    <label class="label">
+        <span>min deltagere for en mulighed</span>
+        <input type="number" bind:value={settings.minPerOption} class="input"/>
     </label>
 
     <Card title="Resultatet">
