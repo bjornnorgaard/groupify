@@ -2,6 +2,7 @@
     import Card from "./Card.svelte";
     import { onMount } from "svelte";
     import { browser } from "$app/environment";
+    import { testData } from "$lib";
 
     interface Settings {
         maxPerOption: number;
@@ -148,7 +149,7 @@
 
 <div class="space-y-4">
     <label class="label">
-        <span>Copy/pasta alle rækker og kolonner her (kun celler med data)</span>
+        <span>Copy/pasta alle rækker og kolonner <button onclick={() => raw = testData}>her</button> (kun celler med data)</span>
         <textarea bind:value={raw} class="textarea" rows="4"></textarea>
     </label>
 
