@@ -134,6 +134,7 @@
         let results = options.map(o => ({ optionKey: o.key, participantNames: [] }));
         let addedNames = new Set<string>();
 
+        // First pass: Assign participants based on their highest priority
         for (let r of responses) {
             for (let p of r.selections.sort((a, b) => a.priority - b.priority)) {
                 if (!addedNames.has(r.name)) {
@@ -147,8 +148,29 @@
             }
         }
 
+        // Second pass: Ensure each option meets the minimum requirement
+        for (let result of results) {
+            if (result.participantNames.length < settings.minPerOption) {
+                for (let otherResult of results) {
+                    if (otherResult.participantNames.length > settings.minPerOption) {
+                        while (result.participantNames.length < settings.minPerOption && otherResult.participantNames.length > settings.minPerOption) {
+                            let name = otherResult.participantNames.pop();
+                            if (name) {
+                                result.participantNames.push(name);
+                                addedNames.delete(name); // Remove from addedNames to allow redistribution
+                            }
+                        }
+                    }
+                    if (result.participantNames.length >= settings.minPerOption) {
+                        break;
+                    }
+                }
+            }
+        }
+
         return results;
-    }</script>
+    }
+</script>
 
 <div class="space-y-4">
     <label class="label">
@@ -178,10 +200,6 @@
                 </div>
             {/if}
         {/each}
-    </Card>
-
-    <Card title="Antal middage per person">
-        <pre class="pre">{JSON.stringify(evaluationCounts, null, 2)}</pre>
     </Card>
 
     <div class="table-container">
