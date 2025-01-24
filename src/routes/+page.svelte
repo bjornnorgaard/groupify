@@ -154,7 +154,7 @@
             {#if o}
                 <div class="pb-4">
                     <h3 class="h3 text-primary-500">{o.label}</h3>
-                    <div class="flex gap-4 flex-wrap">
+                    <div class="flex flex-wrap gap-4">
                         {s.participantNames.join(", ")}.
                     </div>
                 </div>
