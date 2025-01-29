@@ -100,7 +100,7 @@
                 if (!addedNames.has(r.name)) {
                     let option = results.find(o => o.optionKey === p.optionKey);
                     if (option && option.participantNames.length < settings.maxPerOption) {
-                        option.participantNames.push(r.name);
+                        option.participantNames.push(`${r.name} (${p.priority})`);
                         addedNames.add(r.name);
                         break;
                     }
@@ -116,7 +116,7 @@
                             let name = otherResult.participantNames.pop();
                             if (name) {
                                 result.participantNames.push(name);
-                                addedNames.delete(name);
+                                addedNames.delete(name.split(" (")[0]); // Remove the name from the set without the priority
                             }
                         }
                     }
@@ -129,7 +129,6 @@
 
         return results;
     }
-
 </script>
 
 <div class="space-y-4">
@@ -138,15 +137,17 @@
         <textarea bind:value={raw} class="textarea" rows="4"></textarea>
     </label>
 
-    <label class="label">
-        <span>Max antal deltagere for en given mulighed</span>
-        <input type="number" bind:value={settings.maxPerOption} class="input"/>
-    </label>
+    <div class="flex gap-4">
+        <label class="label w-full">
+            <span>Max antal deltagere for en given mulighed</span>
+            <input type="number" bind:value={settings.maxPerOption} class="input"/>
+        </label>
 
-    <label class="label">
-        <span>min deltagere for en mulighed</span>
-        <input type="number" bind:value={settings.minPerOption} class="input"/>
-    </label>
+        <label class="label w-full">
+            <span>min deltagere for en mulighed</span>
+            <input type="number" bind:value={settings.minPerOption} class="input"/>
+        </label>
+    </div>
 
     <Card title="Resultatet">
         {#each schedules as s}
@@ -155,7 +156,9 @@
                 <div class="pb-4">
                     <h3 class="h3 text-primary-500">{o.label}</h3>
                     <div class="flex flex-wrap gap-4">
-                        {s.participantNames.join(", ")}.
+                        {#each s.participantNames as n, i (n)}
+                            {i === s.participantNames.length - 1 ? n : n + ", "}
+                        {/each}
                     </div>
                 </div>
             {/if}
