@@ -164,7 +164,7 @@
                         {#if s.participantNames.length}
                             {s.participantNames.join(", ")}
                         {:else}
-                            <p>Tom</p>
+                            <p>Ingen navne her...</p>
                         {/if}
                     </div>
                 </div>
