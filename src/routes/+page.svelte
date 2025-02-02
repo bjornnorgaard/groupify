@@ -1,5 +1,4 @@
 <script lang="ts">
-    import Card from "./Card.svelte";
     import { testData } from "$lib";
 
     interface Settings {
@@ -148,11 +147,11 @@
         <input type="number" bind:value={settings.minPerOption} class="input"/>
     </label>
 
-    <Card title="Resultatet">
+    <div class="card p-4">
+        <h2 class="h2 pb-4">Resultatet</h2>
         {#if !schedules.length && raw.length}
             <p>Kan se du har indsat data, men kan af en eller anden grund ikke producere et resultat <span class="animate-pulse">⚠</span></p>
-        {/if}
-        {#if !schedules.length && !raw.length}
+        {:else if !schedules.length && !raw.length}
             <p>Pasta data i feltet øverst ☝ på siden, så bliver resultatet vist her...</p>
         {/if}
         {#each schedules as s}
@@ -170,7 +169,7 @@
                 </div>
             {/if}
         {/each}
-    </Card>
+    </div>
 
     {#if unscheduled.length !== 0}
         <pre>{JSON.stringify({missing: unscheduled}, null, 2)}</pre>
