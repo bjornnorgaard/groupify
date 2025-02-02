@@ -134,7 +134,7 @@
 
 <div class="space-y-4">
     <label class="label">
-        <span>Copy/pasta alle rækker og kolonner <button onclick={() => raw = testData}>her</button> (kun celler med data)</span>
+        <span>Copy/pasta alle rækker og kolonner <button onclick={() => raw = testData} class="text-primary-500">her</button> (kun celler med data)</span>
         <textarea bind:value={raw} class="textarea" rows="4"></textarea>
     </label>
 
