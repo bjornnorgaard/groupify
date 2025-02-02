@@ -149,13 +149,23 @@
     </label>
 
     <Card title="Resultatet">
+        {#if !schedules.length && raw.length}
+            <p>Kan se du har indsat data, men kan af en eller anden grund ikke producere et resultat <span class="animate-pulse">⚠</span></p>
+        {/if}
+        {#if !schedules.length && !raw.length}
+            <p>Pasta data i feltet øverst ☝ på siden, så bliver resultatet vist her...</p>
+        {/if}
         {#each schedules as s}
             {@const o = options.find(o => o.key === s.optionKey)}
             {#if o}
                 <div class="pb-4">
                     <h3 class="h3 text-primary-500">{o.label}</h3>
                     <div class="flex flex-wrap gap-4">
-                        {s.participantNames.join(", ")}.
+                        {#if s.participantNames.length}
+                            {s.participantNames.join(", ")}
+                        {:else}
+                            <p>Tom</p>
+                        {/if}
                     </div>
                 </div>
             {/if}
